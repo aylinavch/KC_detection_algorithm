@@ -20,7 +20,7 @@ def detect_type_channel(ch_names):
     """
     eog_names = '^(EOG|eog)'
     emg_names = '^(EMG|emg)'
-    eeg_names = '^(unichannel|([AFfCcPpOoTtIiNn]+|Fp)([1-9]|10|z))$'
+    eeg_names = '^([AFfCcPpOoTtIiNn]|Fp)([1-9]|10|z)*'
     eeg = [ch for ch in ch_names if re.match(eeg_names, ch)]
     eog = [ch for ch in ch_names if re.match(eog_names, ch)]
     emg = [ch for ch in ch_names if re.match(emg_names, ch)]
@@ -29,7 +29,7 @@ def detect_type_channel(ch_names):
     return channels
 
 
-def load_file(file_path: str) -> mne.io.Raw:
+def load_file(file_path: str):
     """
     Import data into an MNE Raw object
     > Only format file allowed is vhdr from BrainVision
@@ -44,6 +44,9 @@ def load_file(file_path: str) -> mne.io.Raw:
     raw: raw.io.Raw
         Raw object from MNE containing the data
         > For more information see https://mne.tools/stable/generated/mne.io.Raw.html
+    channels : dict
+        Dictionary containing the classification of channels according their names
+        > channels['eXg'] contains a list of eXg channels (X = e, o, m)
     """
 
     print(f' ... Reading file {os.path.basename(file_path)} ... \n')
@@ -72,4 +75,4 @@ def load_file(file_path: str) -> mne.io.Raw:
     dict_emg = {key: value for key, value in zip(channels['emg'], emg_value)}
     raw.set_channel_types(dict_emg)
 
-    return raw
+    return raw, channels
