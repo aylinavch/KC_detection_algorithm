@@ -4,6 +4,7 @@ import configuration
 from src.data.load_data import load_file
 from src.data.preprocess import bandpass_filter, set_sleep_stages, set_KC_labels, re_structure
 from src.visualization.visualization import plot
+from src.models.KC_detector_model import semiautomatic_detection
 
 if __name__ == '__main__':
     """
@@ -14,11 +15,9 @@ if __name__ == '__main__':
     """
     for subject in configuration.SUBJECTS:
         print(f'-------------------------------------{subject}-------------------------------------')
+        file_path = os.path.join(configuration.DB_ROOT, subject+'.vhdr')
         
         if len(sys.argv) == 1 or (len(sys.argv) == 2 and sys.argv[-1]=='-labeling'): # default
-            
-            file_path = os.path.join(configuration.DB_ROOT, subject+'.vhdr')
-
             #Load file
             raw, channels = load_file(file_path)
 
@@ -44,4 +43,20 @@ if __name__ == '__main__':
                 raw_cleaned.annotations.save(os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_KCs_and_scoring.txt'))
             else:
                 print('No changes')
+        
+        
+        elif len(sys.argv) == 2 and sys.argv[-1]=='-semiautomatic':
+            #Load file
+            raw, channels = load_file(file_path)
+
+            #Filter each channel depending on type
+            raw_filtered = bandpass_filter(raw, channels['eeg'], [0.16, 35])
+            raw_filtered = bandpass_filter(raw_filtered, channels['emg'], [10, 90])
+            raw_filtered = bandpass_filter(raw_filtered, channels['eog'], [0.16, 10])
+
+            #Restructure data
+            raw_restructure, _ = re_structure(raw_filtered, channels, eeg_channels_selected=['C3_1','C4_1'], plotting=True)
+            
+            #Semiautomatic detection
+            semiautomatic_detection(raw_restructure, eeg_channels_selected=['C4_1'])
             
