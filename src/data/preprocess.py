@@ -1,5 +1,86 @@
 import numpy as np
 import mne.io
+import numpy as np
+from scipy.signal import square
+
+def pulse(N, sfreq):
+    """
+    Create artificial signal with a 0.5 sec pulse to do the grid on the interface
+    """
+    t = np.linspace(0, round(N/sfreq), N, endpoint=False) 
+    signal_pulse = square(2 * np.pi * 1 * t)
+    return signal_pulse
+
+
+def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1','C4_1'], plotting=True):
+    """
+    """
+    eog, _ = raw.get_data(picks=channels['eog'])
+    eeg = raw.get_data(picks=eeg_channels_selected)
+    emg, _ = raw.get_data(picks=channels['emg'])
+
+    if len(eog) == 2:
+        eog = eog[0]
+    if len(emg) == 2:
+        emg = emg[0] - emg[1] 
+    
+    num_of_channels = 2 + len(eeg_channels_selected)
+    new_data = np.empty((num_of_channels, raw.n_times))
+    new_data[0] = eog
+    for i in range(len(eeg_channels_selected)):
+        new_data[1+i] = eeg[i]
+    new_data[-1] = emg
+
+    new_ch_names = ['EOG'] + eeg_channels_selected + ['EMG']
+    new_ch_types = ['eog'] + len(eeg_channels_selected)*['eeg'] + ['emg']
+    new_channels = {'eeg': eeg_channels_selected, 
+                    'eog': ['EOG'], 
+                    'emg': ['EMG']}
+
+    if plotting:
+        new_data = np.insert(new_data, 2, pulse(raw.n_times, raw.info['sfreq']), axis=0)
+        new_ch_names.insert(2, 'grid')
+        new_ch_types.insert(2, 'misc')
+        num_of_channels+=1
+    
+    new_info = mne.create_info(new_ch_names, sfreq=raw.info['sfreq'], ch_types=new_ch_types)
+    new_info.set_meas_date(raw.info['meas_date'])
+    new_raw = mne.io.RawArray(new_data, new_info)
+    new_raw.set_annotations(raw.annotations)
+
+    return new_raw, new_channels
+
+
+def set_KC_labels(raw: mne.io.Raw, KC_path: str):
+    """
+    Set sleep stages annotations to raw object
+
+    Parameters
+    ----------
+    raw : raw.io.Raw
+        Raw object from MNE containing the data
+
+    KC_path: str (path-like)
+        Path related to the labeling txt file with KC you want to read
+   
+    Returns
+    ----------
+    raw_labeled : raw.io.Raw
+        Raw object from MNE containing the scoring annotations
+    """
+    try:
+        all_annots = mne.read_annotations(KC_path, sfreq=raw.info['sfreq'])
+        KC_onset = [ann['onset'] for ann in all_annots if ann['description'] == 'KC']
+        KC_duration = [ann['duration'] for ann in all_annots if ann['description'] == 'KC']
+        KC_description = ['KC' for ann in all_annots if ann['description'] == 'KC']
+    
+        KC_anot = raw.annotations + mne.Annotations(KC_onset, KC_duration, KC_description, orig_time=raw.info['meas_date'])    
+        raw_labeled = raw.copy().set_annotations(KC_anot)
+
+        return raw_labeled
+    except FileNotFoundError: #There is no KC file
+        return raw.copy()
+
 
 def set_sleep_stages(raw: mne.io.Raw, path_scoring: str, epoch_duration = 30):
     """

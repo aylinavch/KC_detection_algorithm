@@ -48,8 +48,6 @@ def load_file(file_path: str):
         Dictionary containing the classification of channels according their names
         > channels['eXg'] contains a list of eXg channels (X = e, o, m)
     """
-
-    print(f' ... Reading file {os.path.basename(file_path)} ... \n')
     mne.set_log_level('CRITICAL')
 
     if os.path.splitext(file_path)[-1] == '.vhdr':
@@ -68,7 +66,7 @@ def load_file(file_path: str):
 
     raw = mne.io.read_raw_brainvision(file_path,
                     eog = channels['eog'],
-                    misc = channels['eeg']+channels['emg'],
+                    misc = channels['emg'],
                     preload=True)
 
     emg_value = ['emg']*len(channels['emg'])
