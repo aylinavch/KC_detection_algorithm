@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import mne.io
 import numpy as np
@@ -22,7 +23,7 @@ def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1',
     if len(eog) == 2:
         eog = eog[0]
     if len(emg) == 2:
-        emg = emg[0] - emg[1] 
+        emg = emg[1] - emg[0] 
     
     num_of_channels = 2 + len(eeg_channels_selected)
     new_data = np.empty((num_of_channels, raw.n_times))
@@ -50,10 +51,34 @@ def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1',
 
     return new_raw, new_channels
 
+def get_only_KC_labels(raw: mne.io.Raw):
+    """
+    """
+    regex_KC = r"^KC(?:_\w+)?$"
+    regex_noKC = r"^noKC(?:_\w+)?$"
+
+    all_annotations = raw.annotations
+
+    KC_onset = [ann['onset'] for ann in all_annotations if re.match(regex_KC, ann['description'])]
+    KC_duration = [ann['duration'] for ann in all_annotations if  re.match(regex_KC, ann['description'])]
+    KC_description = [ann['description'] for ann in all_annotations if re.match(regex_KC, ann['description'])]
+    KC_annotations = mne.Annotations(KC_onset, KC_duration, KC_description, orig_time=raw.info['meas_date'])
+
+    noKC_onset = [ann['onset'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
+    noKC_duration = [ann['duration'] for ann in all_annotations if  re.match(regex_noKC, ann['description'])]
+    noKC_description = [ann['description'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
+    noKC_annotations = mne.Annotations(noKC_onset, noKC_duration, noKC_description, orig_time=raw.info['meas_date'])
+
+    only_KC_annotations = KC_annotations + noKC_annotations
+    
+    raw_only_KC = raw.copy().set_annotations(only_KC_annotations)
+
+    return raw_only_KC
+
 
 def set_KC_labels(raw: mne.io.Raw, KC_path: str):
     """
-    Set sleep stages annotations to raw object
+    ...
 
     Parameters
     ----------
@@ -68,16 +93,28 @@ def set_KC_labels(raw: mne.io.Raw, KC_path: str):
     raw_labeled : raw.io.Raw
         Raw object from MNE containing the scoring annotations
     """
+    regex_KC = r"^KC(?:_\w+)?$"
+    regex_noKC = r"^noKC(?:_\w+)?$"
+
     try:
-        all_annots = mne.read_annotations(KC_path, sfreq=raw.info['sfreq'])
-        KC_onset = [ann['onset'] for ann in all_annots if ann['description'] == 'KC']
-        KC_duration = [ann['duration'] for ann in all_annots if ann['description'] == 'KC']
-        KC_description = ['KC' for ann in all_annots if ann['description'] == 'KC']
-    
-        KC_anot = raw.annotations + mne.Annotations(KC_onset, KC_duration, KC_description, orig_time=raw.info['meas_date'])    
-        raw_labeled = raw.copy().set_annotations(KC_anot)
+        old_annots = mne.read_annotations(KC_path, sfreq=raw.info['sfreq'])
+
+        KC_onset = [ann['onset'] for ann in old_annots if re.match(regex_KC, ann['description'])]
+        KC_duration = [ann['duration'] for ann in old_annots if  re.match(regex_KC, ann['description'])]
+        KC_description = [ann['description'] for ann in old_annots if re.match(regex_KC, ann['description'])]
+        KC_annotations = mne.Annotations(KC_onset, KC_duration, KC_description, orig_time=raw.info['meas_date'])
+
+        noKC_onset = [ann['onset'] for ann in old_annots if re.match(regex_noKC, ann['description'])]
+        noKC_duration = [ann['duration'] for ann in old_annots if  re.match(regex_noKC, ann['description'])]
+        noKC_description = [ann['description'] for ann in old_annots if re.match(regex_noKC, ann['description'])]
+        noKC_annotations = mne.Annotations(noKC_onset, noKC_duration, noKC_description, orig_time=raw.info['meas_date'])
+
+        all_annotations = old_annots + KC_annotations + noKC_annotations
+        
+        raw_labeled = raw.copy().set_annotations(all_annotations)
 
         return raw_labeled
+    
     except FileNotFoundError: #There is no KC file
         return raw.copy()
 

@@ -2,7 +2,7 @@ import os
 import sys
 import configuration
 from src.data.load_data import load_file
-from src.data.preprocess import bandpass_filter, set_sleep_stages, set_KC_labels, re_structure
+from src.data.preprocess import bandpass_filter, set_sleep_stages, set_KC_labels, re_structure, get_only_KC_labels
 from src.visualization.visualization import plot
 from src.models.KC_detector_model import semiautomatic_detection
 
@@ -27,12 +27,12 @@ if __name__ == '__main__':
             raw_filtered = bandpass_filter(raw_filtered, channels['eog'], [0.16, 10])
 
             #Restructure data
-            raw_restructure, _ = re_structure(raw_filtered, channels, eeg_channels_selected=['C3_1','C4_1'], plotting=True)
+            raw_restructure, _ = re_structure(raw_filtered, channels, eeg_channels_selected=['C3_1','C4_1','F3_1', 'F4_1'], plotting=True)
             
             #Load and set labels (scoring and KCs)
             scoring_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_scoring.txt')
             raw_annotated = set_sleep_stages(raw_restructure, scoring_path)
-            KC_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_KCs_and_scoring.txt')
+            KC_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_annotations.txt')
             raw_with_KC = set_KC_labels(raw_annotated, KC_path)
 
             #Plot signals and label KC
@@ -40,7 +40,9 @@ if __name__ == '__main__':
 
             #Save changes
             if raw_cleaned.annotations != raw_with_KC.annotations:
-                raw_cleaned.annotations.save(os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_KCs_and_scoring.txt'))
+                raw_only_KC = get_only_KC_labels(raw_cleaned)
+                os.rename(KC_path, os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_old_annotations.txt'))
+                raw_only_KC.annotations.save(os.path.join(configuration.ANNOTATIONS_ROOT, subject+'_annotations.txt'))
             else:
                 print('No changes')
         
