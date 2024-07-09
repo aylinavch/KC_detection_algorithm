@@ -2,6 +2,7 @@ import os
 import re
 import mne.io
 import mne
+import numpy as np
 
 def detect_type_channel(ch_names):
     """
@@ -74,3 +75,47 @@ def load_file(file_path: str):
     raw.set_channel_types(dict_emg)
 
     return raw, channels
+
+def delete_duplicated_annotations(raw: mne.io.Raw):
+    """
+    Delete duplicated annotations in raw object
+    """
+    annots = raw.annotations
+    new_annots_description = []
+    new_annots_onset = []
+    new_annots_duration = []
+    for i, ann in enumerate(annots):
+        if i == 0:
+            new_annots_description.append(ann['description'])
+            new_annots_onset.append(ann['onset'])
+            new_annots_duration.append(ann['duration'])
+        else:
+            if ann['onset'] != annots[i-1]['onset']:
+                new_annots_description.append(ann['description'])
+                new_annots_onset.append(ann['onset'])
+                new_annots_duration.append(ann['duration'])
+
+    new_annotations = mne.Annotations(new_annots_onset, new_annots_duration, new_annots_description, orig_time=raw.info['meas_date'])
+    raw.annotations.delete(np.arange(len(raw.annotations)))
+    raw.set_annotations(new_annotations)
+    return raw
+
+def clean_annotations(raw: mne.io.Raw):
+    """
+    """
+    annots = raw.annotations
+    new_annots_description = []
+    new_annots_onset = []
+    new_annots_duration = []
+    for i, ann in enumerate(annots):
+        if ann['duration']<=2.0 and ann['duration']>=0.5:
+            new_annots_description.append(ann['description'])
+            new_annots_onset.append(ann['onset'])
+            new_annots_duration.append(ann['duration'])
+        else:
+            print(f'Deleting annotation {ann["description"]} with duration {ann["duration"]} at {ann["onset"]}')
+
+    new_annotations = mne.Annotations(new_annots_onset, new_annots_duration, new_annots_description, orig_time=raw.info['meas_date'])
+    raw.annotations.delete(np.arange(len(raw.annotations)))
+    raw.set_annotations(new_annotations)
+    return raw

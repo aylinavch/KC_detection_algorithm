@@ -2,18 +2,9 @@ import re
 import numpy as np
 import mne.io
 import numpy as np
-from scipy.signal import square
+from src.utils.sleep_stages_utils import get_scoring_from_path
 
-def pulse(N, sfreq):
-    """
-    Create artificial signal with a 0.5 sec pulse to do the grid on the interface
-    """
-    t = np.linspace(0, round(N/sfreq), N, endpoint=False) 
-    signal_pulse = square(2 * np.pi * 1 * t)
-    return signal_pulse
-
-
-def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1','C4_1'], plotting=True):
+def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1','C4_1']):
     """
     """
     eog, _ = raw.get_data(picks=channels['eog'])
@@ -37,18 +28,11 @@ def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1',
     new_channels = {'eeg': eeg_channels_selected, 
                     'eog': ['EOG'], 
                     'emg': ['EMG']}
-
-    if plotting:
-        new_data = np.insert(new_data, 2, pulse(raw.n_times, raw.info['sfreq']), axis=0)
-        new_ch_names.insert(2, 'grid')
-        new_ch_types.insert(2, 'misc')
-        num_of_channels+=1
     
     new_info = mne.create_info(new_ch_names, sfreq=raw.info['sfreq'], ch_types=new_ch_types)
     new_info.set_meas_date(raw.info['meas_date'])
     new_raw = mne.io.RawArray(new_data, new_info)
     new_raw.set_annotations(raw.annotations)
-
     return new_raw, new_channels
 
 def get_only_KC_labels(raw: mne.io.Raw):
@@ -97,7 +81,7 @@ def set_KC_labels(raw: mne.io.Raw, KC_path: str):
     regex_noKC = r"^noKC(?:_\w+)?$"
 
     try:
-        old_annots = mne.read_annotations(KC_path, sfreq=raw.info['sfreq'])
+        old_annots = mne.read_annotations(KC_path, sfreq=raw.info['sfreq']) + raw.annotations
 
         KC_onset = [ann['onset'] for ann in old_annots if re.match(regex_KC, ann['description'])]
         KC_duration = [ann['duration'] for ann in old_annots if  re.match(regex_KC, ann['description'])]
@@ -139,11 +123,10 @@ def set_sleep_stages(raw: mne.io.Raw, path_scoring: str, epoch_duration = 30):
     raw_scored : raw.io.Raw
         Raw object from MNE containing the scoring annotations
     """
-    stages = np.loadtxt(path_scoring, delimiter =' ', usecols =(0) )
+    stages = get_scoring_from_path(path_scoring)
     num_of_epochs = stages.shape[0]
-    epoch_length = 30
     
-    assert num_of_epochs == len(raw)/raw.info['sfreq']//epoch_duration, "File with sleep stages annotations has a different amount of annotations comparing to the recording length"
+    assert num_of_epochs == len(raw)//(raw.info['sfreq']*epoch_duration), "File with sleep stages annotations has a different amount of annotations comparing to the recording length"
 
     onset = np.zeros((num_of_epochs))        
     duration = np.zeros((num_of_epochs))    
@@ -152,9 +135,9 @@ def set_sleep_stages(raw: mne.io.Raw, path_scoring: str, epoch_duration = 30):
     start = 0
     for i in range(num_of_epochs):
         onset[i] = start
-        duration[i] = epoch_length 
+        duration[i] = epoch_duration 
         description[i] = stages[i]
-        start = start + epoch_length
+        start = start + epoch_duration
     
     stages_anot = mne.Annotations(onset, duration, description, orig_time=raw.info['meas_date'])    
     raw_scored = raw.copy().set_annotations(stages_anot)
@@ -190,3 +173,61 @@ def bandpass_filter(raw: mne.io.Raw, selected_channels: list, cut_off_frequencie
         picks=selected_channels)
 
     return raw_filtered
+
+
+def filter_raw_depending_on_channel_type(raw, channels, cut_off_freqs):
+    """
+    Filter each channel depending on type (EEG, EOG and EMG)
+
+    Parameters
+    ----------
+    raw : raw.io.Raw
+        Raw object from MNE containing the data
+
+    channels: list
+        List containing the name of channels to bandpass filter
+    
+    cut_off_freqs: dict
+        Dictionary with the cut off frequencies for each channel type
+    
+    Returns
+    ----------
+    raw_filtered : raw.io.Raw
+        Raw object from MNE containing the data filtered
+    """    
+    raw_filtered = bandpass_filter(raw.copy(), channels['eeg'], cut_off_freqs['eeg'])
+    raw_filtered = bandpass_filter(raw_filtered, channels['emg'], cut_off_freqs['emg'])
+    raw_filtered = bandpass_filter(raw_filtered, channels['eog'], cut_off_freqs['eog'])
+
+    return raw_filtered
+
+def add_channel_to_raw(raw, channels, new_channel, name='LOC', type_ch='eeg'):
+    """
+    """
+    eog = raw.get_data(picks=channels['eog'])
+    eeg = raw.get_data(picks=channels['eeg'])
+    emg = raw.get_data(picks=channels['emg'])
+
+    if len(eog) == 2:
+        eog = eog[0]
+    if len(emg) == 2:
+        emg = emg[1] - emg[0] 
+    
+    num_of_channels = 2 + len(channels['eeg']) + 1
+    new_data = np.empty((num_of_channels, raw.n_times))
+    new_data[0] = eog
+    for i in range(len(channels['eeg'])):
+        new_data[1+i] = eeg[i]
+    new_data[-2] = new_channel
+    new_data[-1] = emg
+
+    new_ch_names = ['EOG'] + channels['eeg'] + [name] + ['EMG']
+    new_ch_types = raw.get_channel_types()
+    new_ch_types.insert(num_of_channels-2, type_ch)
+
+    new_info = mne.create_info(new_ch_names, sfreq=raw.info['sfreq'], ch_types=new_ch_types)
+    new_info.set_meas_date(raw.info['meas_date'])
+    new_raw = mne.io.RawArray(new_data, new_info)
+    new_raw.set_annotations(raw.annotations)
+
+    return new_raw
