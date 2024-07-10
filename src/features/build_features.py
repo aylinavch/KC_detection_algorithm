@@ -232,31 +232,21 @@ def plot_3d_figures(all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs
 def save_characteristics_csv(reports_path, all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs, sfreq):
     """
     """
-    df1 = pd.DataFrame(columns=['power_SO', 'power_SO_relative', 
-                               'power_delta', 'power_delta_relative', 
-                               'power_sigma', 'power_sigma_relative', 
-                               'maxi', 'idx_maxi', 
-                               'mini', 'idx_mini', 
-                               'slope_positive', 
-                               'second_maxi', 'idx_second_maxi', 
-                               'slope_negative', 
-                               'num_of_zc_min_max', 
-                               'num_of_zc_max_min', 'kurtosis', 
-                               'skewness',
-                               'KC'])
+    cols = ['power_SO', 'power_SO_relative', 
+            'power_delta', 'power_delta_relative', 
+            'power_sigma', 'power_sigma_relative', 
+            'maxi', 'idx_maxi', 
+            'mini', 'idx_mini', 
+            'slope_positive', 
+            'second_maxi', 'idx_second_maxi', 
+            'slope_negative', 
+            'num_of_zc_min_max', 
+            'num_of_zc_max_min', 'kurtosis', 
+            'skewness',
+            'KC']
     
-    df2 = pd.DataFrame(columns=['power_SO', 'power_SO_relative', 
-                                'power_delta', 'power_delta_relative', 
-                                'power_sigma', 'power_sigma_relative', 
-                                'maxi', 'idx_maxi', 
-                                'mini', 'idx_mini', 
-                                'slope_positive', 
-                                'second_maxi', 'idx_second_maxi', 
-                                'slope_negative', 
-                                'num_of_zc_min_max', 
-                                'num_of_zc_max_min', 'kurtosis', 
-                                'skewness',
-                                'KC'])
+    df1 = pd.DataFrame(columns=cols)
+    df2 = pd.DataFrame(columns=cols)
     
     for kc in all_KCs_timelocked2center:
         data = build_data_features(kc, sfreq)

@@ -1,11 +1,10 @@
 import os
 import sys
 import configuration
+import numpy as np
 from src.data.load_data import load_file, delete_duplicated_annotations
 from src.data.preprocess import filter_raw_depending_on_channel_type, re_structure, set_sleep_stages, set_KC_labels, bandpass_filter
 from src.features.build_features import plot_events, get_events, read_events, save_mean_figures, plot_3d_figures, save_characteristics_csv
-from matplotlib import pyplot as plt
-import numpy as np
 
 if __name__ == '__main__':
     """
