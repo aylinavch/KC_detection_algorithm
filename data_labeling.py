@@ -25,7 +25,6 @@ if __name__ == '__main__':
             cut_off_freqs = {'eeg': [0.16, 35], 'emg': [10, 90], 'eog': [0.16, 10]}
             raw_filtered = filter_raw_depending_on_channel_type(raw, channels, cut_off_freqs)
 
-
             #Restructure data
             raw_restructure, channels_restructure = re_structure(raw_filtered, channels, eeg_channels_selected=[eeg_channel])
             
