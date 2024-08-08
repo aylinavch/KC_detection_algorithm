@@ -43,9 +43,8 @@ def get_flags(signal, sfreq: int, path_scoring: str, window_length: int =1, stag
         if stages_per_sample[pos] in stages_allowed:
             window = signal[pos:pos+int(window_length*sfreq)]
             if check_if_KC_candidate(window, sfreq):
-                mini = min(window)
-                pos_mini = pos+np.where(window==mini)[0][0]
-                pos_candidate.append(pos_mini)
+                pos_cand = pos+len(window)//2
+                pos_candidate.append(pos_cand)
             # if pos > int(1139.465496*sfreq) and pos < int((1139.465496+0.5279472140764483)*sfreq):
             #     print(f'pos: {pos}')
             #     print(pos+int(step*sfreq))
@@ -77,3 +76,28 @@ def count_KC_noKC(raw: mne.io.Raw):
     noKC = [ann['description'] for ann in annots if re.match(regex_noKC, ann['description'])]
     print('Cantidad de KC:', len(KC) )
     print('Cantidad de no KC:', len(noKC) )
+
+def get_candidates(signal, sfreq: int, path_scoring: str, window_length: int =2, stages_allowed =[2.0], step = 0.1):
+    """
+    """
+    stages_per_sample = set_sleep_stages_per_sample(signal, path_scoring, epoch_duration=30, sfreq=sfreq)    
+    original_signal_length = len(signal)
+    signal = signal[:len(stages_per_sample)]
+    pos_candidate = []
+    pos = 0
+    while pos < len(signal):
+        if stages_per_sample[pos] in stages_allowed:
+            window = signal[pos:pos+int(window_length*sfreq)]
+            if check_if_KC_candidate(window, sfreq):
+                pos_cand = pos
+                pos_candidate.append(pos_cand)           
+            pos += int(step*sfreq)
+        else:
+            pos += int(30*sfreq)
+
+    flags = np.zeros(original_signal_length)
+    for p in pos_candidate:
+        flags[p] = 50e-6
+
+        
+    return flags
