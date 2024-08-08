@@ -97,7 +97,17 @@ def get_candidates(signal, sfreq: int, path_scoring: str, window_length: int =2,
 
     flags = np.zeros(original_signal_length)
     for p in pos_candidate:
-        flags[p] = 50e-6
+        flags[p] = 1
+
+    candidates = np.zeros(original_signal_length)
+    while pos < len(flags)-2*sfreq:
+        if flags[pos] == 1:
+            if 1 not in flags[pos:pos+2*sfreq]:
+                candidates[pos:pos+2*sfreq] = 50e-6
+            else:
+                cant_of_flags = sum(flags[pos:pos+2*sfreq])
+                if cant_of_flags
+                candidate = min(signal[pos:pos+2*sfreq])
 
         
-    return flags
+    return candidates
