@@ -4,7 +4,7 @@ import configuration
 from src.data.load_data import load_file, delete_duplicated_annotations, clean_annotations
 from src.data.preprocess import filter_raw_depending_on_channel_type, add_channel_to_raw, set_sleep_stages, set_KC_labels, re_structure, get_only_KC_labels
 from src.visualization.visualization import plot
-from src.utils.localizator import get_candidates, count_KC_noKC
+from src.utils.localizator import get_candidates_no_upsampling, count_KC_noKC
 
 if __name__ == '__main__':
     """
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
             # Get candidates to label KC
             signal = raw_with_KC.get_data(picks=[eeg_channel])[0]
-            flags = get_candidates(signal, sfreq=raw.info['sfreq'], path_scoring=scoring_path, window_length=1)
+            flags = get_candidates_no_upsampling(signal, sfreq=raw.info['sfreq'], path_scoring=scoring_path, window_length=1)
             raw_plot = add_channel_to_raw(raw_with_KC, channels_restructure, flags, 'LOC', 'eeg')
 
             #Plot signals and candidates to label KC
