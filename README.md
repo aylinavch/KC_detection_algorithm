@@ -29,6 +29,14 @@ source .venv/Scripts/activate
 pip install requirements.txt
 ```
 
+Before running the program, you must create a configuration file called `configuration.py` with this variables:
+- DB_ROOT (root to database files)
+- ANNOTATIONS_ROOT (root to scoring and labeling files)
+- REPORTS_ROOT (root to output)
+- SUBJECTS (list)
+
+> Check `configuration_example.py` for an example of this file
+
 Once everything was installed, now you can run this program. 
 
 > ⚠️ Everytime you will want to run this program again, you must activate the virtual environment. You can do it writing inside the console `source .venv/bin/activate` in Linux or MacOS, or running `source .venv/Scripts/activate` in Windows.
