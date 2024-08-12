@@ -17,10 +17,10 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center'):
         KC_labeled = signal[start:end]
 
         center, maxi, mini = get_center_maxi_mini(KC_labeled)
-        center_in_signal = start + center
+        center_in_signal = int(start + center)
         mini_to_center = abs(mini-center)
         maxi_to_center = abs(maxi-center)
-        KC = signal[int(center_in_signal-window//2*sfreq):int(center_in_signal+window//2*sfreq)]
+        KC = signal[center_in_signal-int(window*sfreq/2):center_in_signal+int(window*sfreq/2)]
     elif timelocked2 == 'min':
         start = int(annotation['onset']*sfreq)
         end = int(start + annotation['duration']*sfreq)
@@ -29,7 +29,7 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center'):
         center_in_signal = start + mini
         mini_to_center = 0
         maxi_to_center = abs(maxi-mini)
-        KC = signal[int(center_in_signal-window//2*sfreq):int(center_in_signal+window//2*sfreq)]
+        KC = signal[center_in_signal-int(window*sfreq/2):center_in_signal-int(window*sfreq/2)]
 
     return KC, maxi_to_center, mini_to_center
 
