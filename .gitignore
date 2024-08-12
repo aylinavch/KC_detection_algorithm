@@ -5,4 +5,4 @@ __pycache__
 reports
 .venv
 configuration.py
-docs\notebooks\testing_things.ipynb
+docs/notebooks/testing_things.ipynb
