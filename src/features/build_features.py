@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colormaps as cm
 from src.features.build_features_utils import get_center_maxi_mini, get_power, get_maxi_mini_slope, build_data_features
 
-def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center'):
+def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center', return_start_of_event=False):
     """
     """
     if timelocked2 == 'center':
@@ -20,7 +20,8 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center'):
         center_in_signal = int(start + center)
         mini_to_center = abs(mini-center)
         maxi_to_center = abs(maxi-center)
-        KC = signal[center_in_signal-int(window*sfreq/2):center_in_signal+int(window*sfreq/2)]
+        new_start = center_in_signal-int(window*sfreq/2)
+        KC = signal[new_start:center_in_signal+int(window*sfreq/2)]
     elif timelocked2 == 'min':
         start = int(annotation['onset']*sfreq)
         end = int(start + annotation['duration']*sfreq)
@@ -29,9 +30,13 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center'):
         center_in_signal = start + mini
         mini_to_center = 0
         maxi_to_center = abs(maxi-mini)
-        KC = signal[center_in_signal-int(window*sfreq/2):center_in_signal-int(window*sfreq/2)]
+        new_start = center_in_signal-int(window*sfreq/2)
+        KC = signal[new_start:center_in_signal-int(window*sfreq/2)]
 
-    return KC, maxi_to_center, mini_to_center
+    if return_start_of_event:
+        return new_start
+    else:
+        return KC, maxi_to_center, mini_to_center
 
 def get_noKC_event(annotation, signal, sfreq, window=2):
     """
@@ -100,7 +105,8 @@ def plot_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: 
     path_noKC = os.path.join(reports_path, f'{subject}_noKC.png')
     plt.savefig(path_noKC)
 
-def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: str, timelocked2='center', window=2):
+def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: str, timelocked2='center', window=2, just_get_new_start=False):
+
     signal = raw.get_data(picks=channel_name)[0]
     all_annotations = raw.annotations
     regex_KC = r"^KC(?:_\w+)?$"
@@ -111,36 +117,45 @@ def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: s
     KC_description = [ann['description'] for ann in all_annotations if re.match(regex_KC, ann['description'])]
     KC_annotations = mne.Annotations(KC_onset, KC_duration, KC_description, orig_time=raw.info['meas_date'])
     KC_signal = []
-    for KC_annot in KC_annotations:
-        KC, _, _ = get_KC_event(KC_annot, signal, raw.info['sfreq'], window=window, timelocked2=timelocked2)
-        KC_signal.append(KC)
-    path_KC = os.path.join(reports_path, f'{subject}_KC_timelocked2{timelocked2}.npy')
-    np.save(path_KC, np.array(KC_signal))
+
+    if just_get_new_start:
+        new_starts =[]
+        for KC_annot in KC_annotations:
+            new_start = get_KC_event(KC_annot, signal, raw.info['sfreq'], window=window, timelocked2=timelocked2, return_start_of_event=True)
+            new_starts.append(new_start)   
+        path_new_start = os.path.join(reports_path, f'{subject}_new_starts_timelocked2{timelocked2}.npy')  
+        np.save(path_new_start, np.array(new_starts))
+    else:
+        for KC_annot in KC_annotations:
+            KC, _, _ = get_KC_event(KC_annot, signal, raw.info['sfreq'], window=window, timelocked2=timelocked2)
+            KC_signal.append(KC)
+        path_KC = os.path.join(reports_path, f'{subject}_KC_timelocked2{timelocked2}.npy')
+        np.save(path_KC, np.array(KC_signal))
 
 
-    noKC_onset = [ann['onset'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
-    noKC_duration = [ann['duration'] for ann in all_annotations if  re.match(regex_noKC, ann['description'])]
-    noKC_description = [ann['description'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
-    noKC_annotations = mne.Annotations(noKC_onset, noKC_duration, noKC_description, orig_time=raw.info['meas_date'])
-    noKC_signal = []
-    for noKC_annot in noKC_annotations:
-        noKC = get_noKC_event(noKC_annot, signal, raw.info['sfreq'], window=window)
-        noKC_signal.append(noKC)
-    path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
-    np.save(path_noKC, np.array(noKC_signal))
+        noKC_onset = [ann['onset'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
+        noKC_duration = [ann['duration'] for ann in all_annotations if  re.match(regex_noKC, ann['description'])]
+        noKC_description = [ann['description'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
+        noKC_annotations = mne.Annotations(noKC_onset, noKC_duration, noKC_description, orig_time=raw.info['meas_date'])
+        noKC_signal = []
+        for noKC_annot in noKC_annotations:
+            noKC = get_noKC_event(noKC_annot, signal, raw.info['sfreq'], window=window)
+            noKC_signal.append(noKC)
+        path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
+        np.save(path_noKC, np.array(noKC_signal))
 
-def read_events(subject:str, reports_path: str):
-    """
-    """
-    path_KC_timelocked2center = os.path.join(reports_path, f'{subject}_KC_timelocked2center.npy')
-    path_KC_timelocked2min = os.path.join(reports_path, f'{subject}_KC_timelocked2min.npy')
-    path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
-    
-    KC_timelocked2center = np.load(path_KC_timelocked2center)
-    KC_timelocked2min = np.load(path_KC_timelocked2min)
-    noKC = np.load(path_noKC)
+    def read_events(subject:str, reports_path: str):
+        """
+        """
+        path_KC_timelocked2center = os.path.join(reports_path, f'{subject}_KC_timelocked2center.npy')
+        path_KC_timelocked2min = os.path.join(reports_path, f'{subject}_KC_timelocked2min.npy')
+        path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
+        
+        KC_timelocked2center = np.load(path_KC_timelocked2center)
+        KC_timelocked2min = np.load(path_KC_timelocked2min)
+        noKC = np.load(path_noKC)
 
-    return KC_timelocked2center, KC_timelocked2min, noKC
+        return KC_timelocked2center, KC_timelocked2min, noKC
 
 def save_mean_figures(reports_path, all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs):
     """

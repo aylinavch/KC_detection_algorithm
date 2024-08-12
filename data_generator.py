@@ -32,4 +32,5 @@ if __name__ == '__main__':
         new_raw = delete_duplicated_annotations(raw_with_KC)
         reports_path = os.path.join(configuration.REPORTS_ROOT, 'npy', 'characterization')
         get_events(new_raw, eeg_channel, subject, reports_path, timelocked2='center', window=3)
+        get_events(new_raw, eeg_channel, subject, reports_path, timelocked2='center', window=3, just_get_new_start=True)
     
