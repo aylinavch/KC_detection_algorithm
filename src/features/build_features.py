@@ -100,7 +100,7 @@ def plot_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: 
     path_noKC = os.path.join(reports_path, f'{subject}_noKC.png')
     plt.savefig(path_noKC)
 
-def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: str, timelocked2='center'):
+def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: str, timelocked2='center', window=2):
     signal = raw.get_data(picks=channel_name)[0]
     all_annotations = raw.annotations
     regex_KC = r"^KC(?:_\w+)?$"
@@ -112,7 +112,7 @@ def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: s
     KC_annotations = mne.Annotations(KC_onset, KC_duration, KC_description, orig_time=raw.info['meas_date'])
     KC_signal = []
     for KC_annot in KC_annotations:
-        KC, _, _ = get_KC_event(KC_annot, signal, raw.info['sfreq'], window=2, timelocked2=timelocked2)
+        KC, _, _ = get_KC_event(KC_annot, signal, raw.info['sfreq'], window=window, timelocked2=timelocked2)
         KC_signal.append(KC)
     path_KC = os.path.join(reports_path, f'{subject}_KC_timelocked2{timelocked2}.npy')
     np.save(path_KC, np.array(KC_signal))
@@ -124,7 +124,7 @@ def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: s
     noKC_annotations = mne.Annotations(noKC_onset, noKC_duration, noKC_description, orig_time=raw.info['meas_date'])
     noKC_signal = []
     for noKC_annot in noKC_annotations:
-        noKC = get_noKC_event(noKC_annot, signal, raw.info['sfreq'], window=2)
+        noKC = get_noKC_event(noKC_annot, signal, raw.info['sfreq'], window=window)
         noKC_signal.append(noKC)
     path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
     np.save(path_noKC, np.array(noKC_signal))
