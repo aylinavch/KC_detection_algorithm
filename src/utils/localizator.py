@@ -3,6 +3,7 @@ import scipy as sp
 import numpy as np
 import mne.io
 from src.utils.sleep_stages_utils import set_sleep_stages_per_sample
+from src.utils.localizator_utils import get_zc_nearest_to
 from matplotlib import pyplot as plt
 
 def count_zero_crossings(arr: np.ndarray) -> int:
@@ -78,28 +79,30 @@ def count_KC_noKC(raw: mne.io.Raw):
     print('Cantidad de KC:', len(KC) )
     print('Cantidad de no KC:', len(noKC) )
 
-def get_zc_nearest_to(signal, to='end', state='up'):
-    all_zc = []
-    for pos in range(len(signal)-1):
-        if state == 'up':
-            condition = (signal[pos] < 0 and signal[pos + 1] > 0)
-        else: 
-            condition = (signal[pos] > 0 and signal[pos + 1] < 0)
-        if condition : #zero-crossing upstate was found
-            all_zc.append(pos)
-    
-    if len(all_zc) > 0:
-        if to == 'end':
-            return all_zc[-1]
-        else:
-            return all_zc[0]
-    else:
-        if to == 'end':
-            return 0
-        else:
-            return len(signal)-1
+def assert_points_position(window, window_filter, min_index, secondmax_index, start_of_event, max_index, end_of_event, window_length, sfreq):
+    try:
+        assert start_of_event >= 0, "Start of event found is delayed more than window length"
+        assert start_of_event < secondmax_index, "Start of event found is bigger than second maximum of the window"
+        assert secondmax_index > 0, "Second maximum found is delayed more than window length"
+        assert secondmax_index < min_index, "Second maximum of the window found is bigger than minimum of the window"
+        assert min_index < max_index, "Minimum of the window found is bigger than maximum of the window"
+        assert max_index < end_of_event, "Maximum of the window found is bigger than end of the event"
+    except AssertionError as msg:
+        print(start_of_event, secondmax_index, min_index, max_index, end_of_event)
+        t = np.linspace(0, window_length, int(window_length*sfreq))
+        plt.plot(t, window)
+        plt.plot(t, window_filter, 'gray', alpha=0.5)
+        plt.plot(t[min_index], window[min_index], 'ro', label='minimo')
+        plt.plot(t[secondmax_index], window[secondmax_index], 'bo', label='sec_max')
+        plt.plot(t[start_of_event], window[start_of_event], 'go', label='start')
+        plt.plot(t[max_index], window[max_index], 'yo', label='max')
+        plt.plot(t[end_of_event], window[end_of_event], 'ko', label='end')
+        plt.legend()
+        plt.show(block=True)
+        raise AssertionError(msg)
+    return True
 
-def detect_points_of_event(window, sfreq, signal, pos, window_length, min_delayed=0.2, secmax_delayed=0.2, max_delayed=0.1):
+def detect_points_of_event(window, sfreq, signal, pos, window_length=2, min_delayed=0.3, secmax_delayed=0.2, max_delayed=0.2):
     """
     start_of_event, , max_index, end_of_event
     
@@ -114,47 +117,59 @@ def detect_points_of_event(window, sfreq, signal, pos, window_length, min_delaye
     Return the zero-crossing point before the second maximum of the window.
     If not found, return the position 0.5 seconds before the second maximum.
     """
-    assert len(window) > 0
-
     ### Finding minimum (in window)
-    if int(np.argmin(window)) > int(min_delayed*sfreq):
-        min_index = int(np.argmin(window))
+    posible_min = int(np.argmin(window))
+    if posible_min > int(min_delayed*sfreq):
+        min_index = posible_min
     else: # delay window min_delayed seconds from minimum
-        min_index = int(np.argmin(window))
-        pos = min_index-int(min_delayed*sfreq)
+        min_index = posible_min
+        pos -= int(min_delayed*sfreq)
         min_index += int(min_delayed*sfreq)
         window = signal[pos:pos+int(window_length*sfreq)]
 
-    ### Finding second maximum (in window filtered)   
-    sos = sp.signal.butter(2**3, [1,8], 'bandpass', fs=sfreq, output='sos')
+    ### Finding second maximum (in window filtered)
+    sos = sp.signal.butter(2**5, [1,8], 'bandpass', fs=sfreq, output='sos')
     window_filter = sp.signal.sosfiltfilt(sos, window)
-
-    start_event_until_min = min_index-int(min_delayed*sfreq)
+    # try:    
+    #    window_filter = sp.signal.sosfiltfilt(sos, window)
+    # except ValueError:
+    #    window_filter = window.copy()
+    start_event_until_min = min_index-int(min_delayed*sfreq) if min_index-int(min_delayed*sfreq) > 0 else 0
     event_until_min = window_filter[start_event_until_min:min_index]
     secondmax_index = int(np.argmax(event_until_min))+start_event_until_min
     if secondmax_index < int(secmax_delayed*sfreq):
         secondmax_index = int(secmax_delayed/2*sfreq)
-    # if secondmax_index == min_index:
-    # int(np.argmax(event_until_min))+min_index-int(0.2*sfreq) if min_index-int(0.2*sfreq) > 0 else int(np.argmax(event_until_min))
 
     ### Finding starting point (in window filtered)
     start_of_event = get_zc_nearest_to(window_filter[:secondmax_index], 'end', state='up')
+
     ### Finding maximum (in window)
     max_index = int(np.argmax(window[min_index:]))+min_index
     if max_index > int((window_length-max_delayed)*sfreq):
-        print('ENTRO')
-        pos -= int(max_delayed*sfreq)
-        min_index -= int(max_delayed*sfreq)
-        secondmax_index -= int(max_delayed*sfreq)
-        start_of_event -= int(max_delayed*sfreq)
+        pos += int(max_delayed*sfreq)
         window = signal[pos:pos+int(window_length*sfreq)]
         window_filter = sp.signal.sosfiltfilt(sos, window)
+        start_of_event = start_of_event - int(max_delayed*sfreq) if (start_of_event - int(max_delayed*sfreq)) > 0 else 0
+        secondmax_index -= int(max_delayed*sfreq)
+        min_index -= int(max_delayed*sfreq)
+        if secondmax_index <= 0:
+            secondmax_index = (min_index-start_of_event)//2
         max_index = int(np.argmax(window[min_index:]))+min_index
+    
 
     ### Finding ending point (in window filtered)
     end_of_event = get_zc_nearest_to(window_filter[max_index:], 'start', state='down') + max_index
-        
+    if end_of_event == max_index:
+        #print(f'End of event is the same as max_index ({end_of_event})')
+        end_of_event = int(max_index + max_delayed*sfreq)
+        #print('Se corrigió a ', end_of_event)
+
+    #print(start_of_event, secondmax_index, min_index, max_index, end_of_event)
+    assert_points_position(window, window_filter, min_index, secondmax_index, start_of_event, max_index, end_of_event, window_length, sfreq)
+
+    # t = np.linspace(0, window_length, int(window_length*sfreq))
     # plt.plot(t, window)
+    # plt.plot(t, window_filter, 'gray', alpha=0.5)
     # plt.plot(t[min_index], window[min_index], 'ro', label='minimo')
     # plt.plot(t[secondmax_index], window[secondmax_index], 'bo', label='sec_max')
     # plt.plot(t[start_of_event], window[start_of_event], 'go', label='start')
@@ -162,46 +177,20 @@ def detect_points_of_event(window, sfreq, signal, pos, window_length, min_delaye
     # plt.plot(t[end_of_event], window[end_of_event], 'ko', label='end')
     # plt.legend()
     # plt.show(block=True)
-    # position = pos if pos < int(secondmax_index - 0.2*sfreq) else int(secondmax_index - 0.2*sfreq)
-    # position = position if position < min_index else 0
-    #         # return position, min_index, secondmax_index
-    # position = int(secondmax_index - 0.2*sfreq) if int(secondmax_index - 0.2*sfreq) < min_index else 0
-    # return position, min_index, secondmax_index
-    t = np.linspace(0, window_length, int(window_length*sfreq))
-    plt.plot(t, window)
-    plt.plot(t, window_filter, 'gray', alpha=0.5)
-    plt.plot(t[min_index], window[min_index], 'ro', label='minimo')
-    plt.plot(t[secondmax_index], window[secondmax_index], 'bo', label='sec_max')
-    plt.plot(t[start_of_event], window[start_of_event], 'go', label='start')
-    plt.plot(t[max_index], window[max_index], 'yo', label='max')
-    plt.plot(t[end_of_event], window[end_of_event], 'ko', label='end')
-    plt.legend()
-    plt.show(block=True)
     return window, start_of_event, min_index, secondmax_index, max_index, end_of_event, pos
 
-# def detect_ending_point_of_event(window: np.ndarray, sfreq: int):
-#     """
-#     Return the zero-crossing point before the second maximum of the window.
-#     If not found, return the position 0.5 seconds before the second maximum.
-#     """
-#     assert len(window) > 0 
+def center_event_between_max_min(window, signal, sfreq, pos, window_length):
+    """
+    """
+    max_index = int(np.argmax(window))
+    min_index = int(np.argmin(window))
+    assert max_index > min_index, "ERROR: Found maximum before minimum in KC candidate"
+    center = pos + min_index + int((max_index-min_index)//2)
+    new_window = signal[center-int(sfreq*(window_length/2)):center+int(sfreq*(window_length/2))]
+    new_pos = center-int(sfreq*(window_length/2))
+    return new_window, new_pos
 
-#     sos = sp.signal.butter(2**3, [0.16,8], 'bandpass', fs=sfreq, output='sos')
-#     window_filter = sp.signal.sosfiltfilt(sos, window)
-#     min_index = int(np.argmin(window))
-#     start_event = min_index-int(0.2*sfreq) if min_index-int(0.2*sfreq) > 0 else 0
-#     event_until_min = window[start_event:min_index]
-#     secondmax_index = min_index - int(0.2*sfreq) + int(np.argmax(event_until_min))
-
-#     for pos in range(secondmax_index, 0,-1):
-#         if (window_filter[pos] > 0 and window_filter[pos - 1] < 0):
-
-#             return pos if pos < int(secondmax_index - 0.2*sfreq) else int(secondmax_index - 0.2*sfreq)
-#     return int(secondmax_index - 0.2*sfreq)
-
-
-
-def get_candidates_no_upsampling(signal, sfreq: int, path_scoring: str, window_length: int =1, stages_allowed =[2.0], step = 0.1, output_length=2):
+def get_candidates_no_upsampling(signal, sfreq: int, path_scoring: str, window_length: int =1, stages_allowed =[2.0], step = 0.1):
     """
     """
     stages_per_sample = set_sleep_stages_per_sample(signal, path_scoring, epoch_duration=30, sfreq=sfreq)    
@@ -209,39 +198,38 @@ def get_candidates_no_upsampling(signal, sfreq: int, path_scoring: str, window_l
     signal = signal[:len(stages_per_sample)]
     pos_candidate = []
     pos = 0
-    t = np.linspace(0, output_length, int(output_length*sfreq))
-    while pos < len(signal):
+    t = np.linspace(0, window_length, int(window_length*sfreq))
+    while pos < original_signal_length-int(window_length*sfreq):
+        print(pos)
         if stages_per_sample[pos] in stages_allowed:
             window = signal[pos:pos+int(window_length*sfreq)]
             if check_if_KC_candidate(window, sfreq):
-                max_index = int(np.argmax(window))
-                min_index = int(np.argmin(window))
-                center = pos + min_index + int((max_index-min_index)//2)
-                window = signal[center-int(sfreq*(window_length/2)):center+int(sfreq*(window_length/2))]
-                pos = center-int(sfreq*(window_length/2))
-                window, start_of_event, min_index, secondmax_index, max_index, end_of_event, pos = detect_points_of_event(window, sfreq, signal, pos, window_length) 
-                
-                if (end_of_event - start_of_event) < int(0.4*sfreq):
-                    pos += end_of_event
+                window, pos = center_event_between_max_min(window, signal, sfreq, pos, window_length)
+                try:
+                    window, start_of_event, min_index, secondmax_index, max_index, end_of_event, pos = detect_points_of_event(window, sfreq, signal, pos, window_length) 
+                except AssertionError: # Could not find the points of the event correctly
+                    pos += int(step*sfreq)
                     continue
-
-                center = pos + min_index + int((max_index-min_index)//2)
-                new_window = signal[center-int(sfreq*(output_length/2)):center+int(sfreq*(output_length/2))]
+                if ((end_of_event - start_of_event) < int(0.4*sfreq)) or ((end_of_event - start_of_event) > int(2.1*sfreq)): # Event is too short or too long
+                    pos += int(step*sfreq)
+                    continue
                 sos = sp.signal.butter(2**3, [1,8], 'bandpass', fs=sfreq, output='sos')
-                new_window_filter = sp.signal.sosfiltfilt(sos, new_window)
-                dif = pos  - center + int(sfreq*(output_length/2))
-                plt.plot(t, new_window)
-                plt.plot(t, new_window_filter, 'gray', alpha=0.5)
-                plt.plot(t[min_index+dif], new_window[min_index+dif], 'ro', label='minimo')
-                plt.plot(t[secondmax_index+dif], new_window[secondmax_index+dif], 'bo', label='sec_max')
-                plt.plot(t[start_of_event+dif], new_window[start_of_event+dif], 'go', label='start')
-                plt.plot(t[max_index+dif], new_window[max_index+dif], 'yo', label='max')
-                plt.plot(t[end_of_event+dif], new_window[end_of_event+dif], 'ko', label='end')
+                window_filter = sp.signal.sosfiltfilt(sos, window)
+                plt.plot(t, window)
+                plt.plot(t, window_filter, 'gray', alpha=0.5)
+                plt.plot(t[min_index], window[min_index], 'ro', label='min')
+                plt.plot(t[secondmax_index], window[secondmax_index], 'bo', label='sec_max')
+                plt.plot(t[start_of_event], window[start_of_event], 'go', label='start')
+                plt.plot(t[max_index], window[max_index], 'yo', label='max')
+                plt.plot(t[end_of_event], window[end_of_event], 'ko', label='end')
                 plt.legend()
                 plt.show(block=True)
-                pos_cand = pos + start_of_event
-                pos_candidate.append(pos_cand)
-                pos += end_of_event  
+
+                pos_start = pos + start_of_event
+                assert end_of_event > 0
+                pos_end = pos + end_of_event
+                pos_candidate.append([pos_start, pos_end])
+                pos = pos_end + 1
             else:
                 pos += int(step*sfreq)
         else:
@@ -249,7 +237,7 @@ def get_candidates_no_upsampling(signal, sfreq: int, path_scoring: str, window_l
     
     flags = np.zeros(original_signal_length)
     for p in pos_candidate:
-        flags[p] = 50e-6
+        flags[p[0]:p[1]] = [50e-6]*len(flags[p[0]:p[1]])
 
     # candidates = np.zeros(original_signal_length)
     # while pos < len(flags)-2*sfreq:
