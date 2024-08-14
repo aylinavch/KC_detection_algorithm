@@ -100,7 +100,7 @@ def delete_duplicated_annotations(raw: mne.io.Raw):
     raw.set_annotations(new_annotations)
     return raw
 
-def clean_annotations(raw: mne.io.Raw):
+def clean_annotations(raw: mne.io.Raw, thresholds: list):
     """
     """
     annots = raw.annotations
@@ -108,7 +108,7 @@ def clean_annotations(raw: mne.io.Raw):
     new_annots_onset = []
     new_annots_duration = []
     for i, ann in enumerate(annots):
-        if ann['duration']<=2.0 and ann['duration']>=0.5:
+        if ann['duration']<=thresholds[1] and ann['duration']>=thresholds[0]:
             new_annots_description.append(ann['description'])
             new_annots_onset.append(ann['onset'])
             new_annots_duration.append(ann['duration'])
