@@ -1,3 +1,5 @@
+EEG_CHANNEL = 'C4_1'
+
 DB_ROOT = r'C:\Users\ayvazquez\aylin\KC_detection_algorithm\data\raw'
 ANNOTATIONS_ROOT = r'C:\Users\ayvazquez\aylin\KC_detection_algorithm\data\annotations'
 REPORTS_ROOT = r'C:\Users\ayvazquez\aylin\KC_detection_algorithm\reports'
