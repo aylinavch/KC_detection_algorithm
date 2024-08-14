@@ -5,8 +5,8 @@ import joblib
 import scipy as sp
 import numpy as np
 import mne.io
-from src.utils.sleep_stages_utils import set_sleep_stages_per_sample
-from src.utils.localizator_utils import get_zc_nearest_to
+from src.base.sleep_stages_utils import set_sleep_stages_per_sample
+from src.base.localizator_utils import get_zc_nearest_to
 from matplotlib import pyplot as plt
 
 def count_zero_crossings(arr: np.ndarray) -> int:

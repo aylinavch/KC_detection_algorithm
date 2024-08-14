@@ -3,7 +3,7 @@ import sys
 import configuration
 from src.data.load_data import load_file, delete_duplicated_annotations
 from src.data.preprocess import filter_raw_depending_on_channel_type, set_sleep_stages, set_KC_labels, re_structure, add_channel_to_raw
-from src.utils.localizator import get_localized_and_detected
+from src.base.localizator import get_localized_and_detected
 from src.visualization.visualization import plot
 
 if __name__ == '__main__':

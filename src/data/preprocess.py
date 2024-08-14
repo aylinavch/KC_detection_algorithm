@@ -2,7 +2,7 @@ import re
 import numpy as np
 import mne.io
 import numpy as np
-from src.utils.sleep_stages_utils import get_scoring_from_path
+from src.base.sleep_stages_utils import get_scoring_from_path
 
 def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1','C4_1']):
     """
