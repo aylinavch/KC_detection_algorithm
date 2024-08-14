@@ -201,7 +201,7 @@ def filter_raw_depending_on_channel_type(raw, channels, cut_off_freqs):
 
     return raw_filtered
 
-def add_channel_to_raw(raw, channels, new_channel, name='LOC', type_ch='eeg'):
+def add_channel_to_raw(raw, channels, new_channel, name):
     """
     """
     eog = raw.get_data(picks=channels['eog'])
@@ -210,21 +210,23 @@ def add_channel_to_raw(raw, channels, new_channel, name='LOC', type_ch='eeg'):
 
     if len(eog) == 2:
         eog = eog[0]
+        channels['eog'] = ['EOG']
     if len(emg) == 2:
-        emg = emg[1] - emg[0] 
+        emg = emg[1] - emg[0]
+        channels['emg'] = ['EMG']
     
-    num_of_channels = 2 + len(channels['eeg']) + 1
+    channels['eeg'].append(name)
+    num_of_channels = 2 + len(channels['eeg'])
     new_data = np.empty((num_of_channels, raw.n_times))
     new_data[0] = eog
-    for i in range(len(channels['eeg'])):
-        new_data[1+i] = eeg[i]
+    for i in range(1, num_of_channels-2):
+        new_data[i] = eeg[i-1]
     new_data[-2] = new_channel
     new_data[-1] = emg
 
-    new_ch_names = ['EOG'] + channels['eeg'] + [name] + ['EMG']
+    new_ch_names = channels['eog'] + channels['eeg'] + channels['emg']
     new_ch_types = raw.get_channel_types()
-    new_ch_types.insert(num_of_channels-2, type_ch)
-
+    new_ch_types.insert(num_of_channels-2, 'eeg')
     new_info = mne.create_info(new_ch_names, sfreq=raw.info['sfreq'], ch_types=new_ch_types)
     new_info.set_meas_date(raw.info['meas_date'])
     new_raw = mne.io.RawArray(new_data, new_info)
