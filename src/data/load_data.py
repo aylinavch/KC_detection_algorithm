@@ -1,8 +1,20 @@
+import configuration
 import os
 import re
 import mne.io
 import mne
 import numpy as np
+
+def load_configuration_parameters(subject):
+    """
+    """
+    eeg_channel = configuration.EEG_CHANNEL
+    path_file = os.path.join(configuration.DB_ROOT, subject + '.vhdr')
+    scoring_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject + '_scoring.txt')
+    annotations_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject + '_annotations.txt')
+    cut_off_freqs = configuration.CUT_OFF_FREQUENCIES
+
+    return eeg_channel, path_file, scoring_path, annotations_path, cut_off_freqs
 
 def detect_type_channel(ch_names):
     """
