@@ -1,4 +1,7 @@
 EEG_CHANNEL = 'C4_1'
+CUT_OFF_FREQUENCIES = {'eeg': [0.16, 35], 
+                       'emg': [10, 90], 
+                       'eog': [0.16, 10]}
 
 DB_ROOT = r'C:\Users\ayvazquez\aylin\KC_detection_algorithm\data\raw'
 ANNOTATIONS_ROOT = r'C:\Users\ayvazquez\aylin\KC_detection_algorithm\data\annotations'
