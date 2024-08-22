@@ -17,7 +17,7 @@ def count_zero_crossings(arr: np.ndarray) -> int:
     return num_zc
 
 
-def check_if_KC_candidate(window, sfreq: int):
+def check_if_meet_main_conditions(window, sfreq: int):
     """
     """
     maxi = max(window)
@@ -25,51 +25,43 @@ def check_if_KC_candidate(window, sfreq: int):
     pos_maxi = np.where(window==maxi)[0][0] 
     pos_mini = np.where(window==mini)[0][0]
 
-    p2p_amplitude = (maxi - mini)*1e6
+    p2p_amplitude = (maxi - mini)*1e6 #in microvolts
     dur_mini_maxi = (pos_maxi - pos_mini)/sfreq #in seconds
 
-    if (pos_mini<pos_maxi) and (p2p_amplitude>75) and (dur_mini_maxi<0.5):
+    if (pos_mini<pos_maxi) and (p2p_amplitude>=75) and (dur_mini_maxi<1):
         return True
     else:
         return False
-    # print((pos_mini<pos_maxi), (p2p_amplitude>75), (dur_mini_maxi<2))
-    # return maxi, mini, pos_maxi, pos_mini, p2p_amplitude, dur_mini_maxi
 
 
-def get_flags(signal, sfreq: int, path_scoring: str, window_length: int =1, stages_allowed =[2.0], step = 0.1):
+def get_candidates(signal:np.ndarray, sfreq: int, path_scoring: str, window_length: int =1, stages_allowed:list =[2.0], step:float = 0.1):
     """
     """
     stages_per_sample = set_sleep_stages_per_sample(signal, path_scoring, epoch_duration=30, sfreq=sfreq)    
-    original_signal_length = len(signal)
     signal = signal[:len(stages_per_sample)]
     pos_candidate = []
     pos = 0
     while pos < len(signal):
         if stages_per_sample[pos] in stages_allowed:
             window = signal[pos:pos+int(window_length*sfreq)]
-            if check_if_KC_candidate(window, sfreq):
-                pos_cand = pos+len(window)//2
-                pos_candidate.append(pos_cand)
-            # if pos > int(1139.465496*sfreq) and pos < int((1139.465496+0.5279472140764483)*sfreq):
-            #     print(f'pos: {pos}')
-            #     print(pos+int(step*sfreq))
-            #     print(pos_mini)
-        pos += int(step*sfreq)
-
-    flags = np.zeros(original_signal_length)
+            if check_if_meet_main_conditions(window, sfreq):
+                try:
+                    window, idx_start, _, _, _, idx_end, new_pos = detect_points_of_event(window, sfreq, signal, pos, window_length=3) 
+                except AssertionError: # Could not find the points of the event correctly
+                    pos += int(window_length/2*sfreq)
+                    continue
+                pos_candidate.append([(new_pos + idx_start)/sfreq, (idx_end-idx_start)/sfreq]) #[onset, duration]
+                pos = new_pos + idx_end + 1
+            else:
+                pos += int(step*sfreq)
+        else:
+            pos += int(30*sfreq)
+    
+    predicted = []
     for p in pos_candidate:
-        flags[p:p+int(step*sfreq)] = 50e-6
+        predicted.append([p[0],p[1]])
         
-    return flags
-
-        # window = signal[int(1600.904352*sfreq):int((1600.904352+0.5455454545453904)*sfreq)]
-        # maxi, mini, pos_maxi, pos_mini, p2p_amplitude, dur_mini_maxi = check_if_KC_candidate(window, sfreq)
-        # print(f'maxi: {maxi}, mini: {mini}, pos_maxi: {pos_maxi}, pos_mini: {pos_mini}, p2p_amplitude: {p2p_amplitude}, dur_mini_maxi: {dur_mini_maxi}')
-        # t = np.linspace(1600.904352, 1600.904352+0.5455454545453904, len(window))
-
-        # plt.plot(t, window)
-        # plt.plot(t[pos_maxi], maxi, 'ro')
-        # plt.plot(t[pos_mini], mini, 'bo')
+    return predicted
 
 def count_KC_noKC(raw: mne.io.Raw):
     """
@@ -79,8 +71,7 @@ def count_KC_noKC(raw: mne.io.Raw):
     regex_noKC = r"^noKC(?:_\w+)?$"
     KC = [ann['description'] for ann in annots if re.match(regex_KC, ann['description'])]
     noKC = [ann['description'] for ann in annots if re.match(regex_noKC, ann['description'])]
-    print('Cantidad de KC:', len(KC) )
-    print('Cantidad de no KC:', len(noKC) )
+    return len(KC), len(noKC)
 
 def assert_points_position(window, window_filter, min_index, secondmax_index, start_of_event, max_index, end_of_event, window_length, sfreq):
     try:
@@ -221,7 +212,7 @@ def get_localized_and_detected(signal, sfreq: int, path_scoring: str, window_len
     while pos < len(signal):
         if stages_per_sample[pos] in stages_allowed:
             window = signal[pos:pos+int(window_length*sfreq)]
-            if check_if_KC_candidate(window, sfreq):
+            if check_if_meet_main_conditions(window, sfreq):
                 try:
                     window, idx_start, idx_minimum, idx_secmax, idx_maximum, idx_end, new_pos = detect_points_of_event(window, sfreq, signal, pos, window_length=3) 
                 except AssertionError: # Could not find the points of the event correctly
