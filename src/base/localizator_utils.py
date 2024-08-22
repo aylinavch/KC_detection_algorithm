@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 
+
 def get_zc_nearest_to(signal, to='end', state='up'):
     all_zc = []
     for pos in range(len(signal)-1):
@@ -21,7 +22,8 @@ def get_zc_nearest_to(signal, to='end', state='up'):
             return 0
         else:
             return len(signal)-1
-        
+
+
 def get_num_of_zc(signal, state='up'):
     all_zc = []
     for pos in range(len(signal)-1):
@@ -34,13 +36,9 @@ def get_num_of_zc(signal, state='up'):
     
     return len(all_zc)
 
+
 def detect_points_of_KC(zoi, start_zoi, onset_of_label, duration_of_label, sfreq):
     """
-    event: KC event ZOI
-    start_zoi: Start sampling point of zone of interest (event centered in min-max with 3s of duration)
-    onset_of_label: Starting sample point of KC manually labeled
-    duration_of_label: Duration (in seconds) of KC manually labeled
-    sfreq: Sampling frequency of the signal
     """
     offset = onset_of_label - start_zoi
     assert offset > 0 

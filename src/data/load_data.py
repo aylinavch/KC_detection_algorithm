@@ -5,6 +5,7 @@ import mne.io
 import mne
 import numpy as np
 
+
 def load_configuration_parameters(subject, codename, mode):
     """
     """
@@ -15,6 +16,7 @@ def load_configuration_parameters(subject, codename, mode):
     cut_off_freqs = configuration.CUT_OFF_FREQUENCIES
 
     return eeg_channel, path_file, scoring_path, annotations_path, cut_off_freqs
+
 
 def detect_type_channel(ch_names):
     """
@@ -88,6 +90,7 @@ def load_file(file_path: str):
 
     return raw, channels
 
+
 def delete_duplicated_annotations(raw: mne.io.Raw):
     """
     Delete duplicated annotations in raw object
@@ -111,6 +114,7 @@ def delete_duplicated_annotations(raw: mne.io.Raw):
     raw.annotations.delete(np.arange(len(raw.annotations)))
     raw.set_annotations(new_annotations)
     return raw
+
 
 def clean_annotations(raw: mne.io.Raw, thresholds: list):
     """

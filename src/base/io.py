@@ -36,7 +36,8 @@ def check_if_same_num_of_KC_and_noKC(raw_only_KC_and_noKC: mne.io.Raw, mode: str
 
 
 def check_if_there_is_new_labels(raw_after_plot, raw_before_plot, annotations_path, mode, subject, codename):
-    
+    """
+    """
     if raw_after_plot.annotations != raw_before_plot.annotations:
         try:
             new_annotations_path = annotations_path.split('.')[0]+"_old.txt"
@@ -70,63 +71,9 @@ def check_if_enough_candidates_were_labeled(raw_after_plot: mne.io.Raw, mode: st
     return True
 
 
-# def clean_annotations_to_KC_noKC(plot_annotations, orig_time):
-#     """
-#     """
-#     print('original annotations', plot_annotations)
-#     regex_noKC = r"^noKC(?:_\w+)?$"
-#     regex_KC = r"^KC(?:_\w+)?$"
-
-#     KC_description = [ann['description'] for ann in plot_annotations if re.match(regex_KC, ann['description'])]
-#     KC_onset = [ann['onset'] for ann in plot_annotations if re.match(regex_KC, ann['description'])]
-#     KC_duration = [ann['duration'] for ann in plot_annotations if re.match(regex_KC, ann['description'])]
-#     KC_annotations = mne.Annotations(onset=KC_onset, 
-#                                      duration=KC_duration, 
-#                                      description=KC_description, 
-#                                      orig_time=orig_time)
-    
-#     print('KC_annotations', KC_annotations)
-    
-#     # KC_before_description = [ann['description'] for ann in before_plot_annotations if re.match(regex_KC, ann['description'])]
-#     # KC_before_onset = [ann['onset'] for ann in before_plot_annotations if re.match(regex_KC, ann['description'])]
-#     # KC_before_duration = [ann['duration'] for ann in before_plot_annotations if re.match(regex_KC, ann['description'])]
-#     # old_KC_annotations = mne.Annotations(onset=KC_before_onset, 
-#     #                                  duration=KC_before_duration, 
-#     #                                  description=KC_before_description, 
-#     #                                  orig_time=orig_time)
-#     # print('old_KC_annotations',old_KC_annotations)
-        
-#     noKC_to_KC = []
-#     KC_to_delete = []
-
-#     for i, annot in enumerate(plot_annotations):
-#         if re.match(regex_noKC, annot['description']):
-#             for j, KC_annot in enumerate(KC_annotations):
-#                 KC_start = KC_annot['onset']
-#                 KC_end = KC_start + KC_annot['duration']
-#                 if KC_start <= annot['onset'] and  annot['onset'] <= KC_end:
-#                     noKC_to_KC.append(i)
-#                     KC_to_delete.append(j)    
-    
-#     plot_annotations[noKC_to_KC].rename({'noKC': 'KC'})
-#     print('There are new KC:',len(noKC_to_KC))
-
-#     plot_annotations.delete(noKC_to_KC)
-#     # print('noKC_to_KC', noKC_to_KC)
-#     # print('plot_annotations after delete noKC_to_KC', plot_annotations)
-
-#     # noKC_annotations = mne.Annotations(onset=plot_annotations.onset, 
-#     #                                   duration=plot_annotations.duration, 
-#     #                                   description=['noKC']*len(plot_annotations.onset), 
-#     #                                   orig_time=orig_time)
-#     # print('noKC_annotations', noKC_annotations)
-    
-#     return plot_annotations
-
-import mne
-
 def clean_annotations_to_KC_noKC(new_annotations, orig_time):
-    
+    """
+    """
     regex_KC = r"^KC(?:_\w+)?$"
     regex_noKC = r"^noKC(?:_\w+)?$"
 
@@ -148,9 +95,6 @@ def clean_annotations_to_KC_noKC(new_annotations, orig_time):
                         annotations_to_delete.append(i)
                         break  # Stop searching once an overlap is found          
     
-    # print(new_annotations)
-    # print(new_annotations[annotations_to_rename])
-    # print(new_annotations[annotations_to_delete])
     new_KC_ann = new_annotations[annotations_to_rename].rename({'noKC': 'KC'})
     new_KC_ann_onset = [ann['onset'] for ann in new_KC_ann]
     new_KC_ann_duration = [ann['duration'] for ann in new_KC_ann]
@@ -169,7 +113,8 @@ def clean_annotations_to_KC_noKC(new_annotations, orig_time):
 
 
 def check_file_if_ready_to_save(raw_after_plot: mne.io.Raw, raw_before_plot: mne.io.Raw, annotations_path: str, mode: str, codename: str, subject: str):
-    
+    """
+    """
     if mode == 'blind':
         if check_if_there_is_new_labels(raw_after_plot, raw_before_plot, annotations_path, mode, subject, codename):
             raw_only_KC_and_noKC = get_only_KC_noKC_labels(raw_after_plot)
@@ -196,6 +141,3 @@ def check_file_if_ready_to_save(raw_after_plot: mne.io.Raw, raw_before_plot: mne
                 return False
         else:
             return False
-
-    
-   

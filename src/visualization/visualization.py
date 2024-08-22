@@ -2,6 +2,7 @@ import mne
 import numpy as np
 from scipy.signal import square
 
+
 def pulse(N, sfreq):
     """
     Create artificial signal with a 0.5 sec pulse to do the grid on the interface
@@ -28,6 +29,7 @@ def add_grid_to_raw(raw: mne.io.Raw):
     new_raw.set_annotations(raw.annotations)
 
     return new_raw
+
 
 def plot(raw: mne.io.Raw, title: str):
     """

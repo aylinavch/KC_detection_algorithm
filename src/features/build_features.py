@@ -6,7 +6,8 @@ import re
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cm
-from src.features.build_features_utils import get_center_maxi_mini, get_power, get_maxi_mini_slope, build_data_features
+from src.features.build_features_utils import get_center_maxi_mini, build_data_features
+
 
 def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center', return_start_of_event=False):
     """
@@ -37,6 +38,7 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center', retu
         return new_start
     else:
         return KC, maxi_to_center, mini_to_center
+
 
 def get_noKC_event(annotation, signal, sfreq, window=2):
     """
@@ -105,6 +107,7 @@ def plot_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: 
     path_noKC = os.path.join(reports_path, f'{subject}_noKC.png')
     plt.savefig(path_noKC)
 
+
 def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: str, timelocked2='center', window=2, just_get_new_start=False):
 
     signal = raw.get_data(picks=channel_name)[0]
@@ -144,18 +147,20 @@ def get_events(raw: mne.io.Raw, channel_name: str, subject: str, reports_path: s
         path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
         np.save(path_noKC, np.array(noKC_signal))
 
-    def read_events(subject:str, reports_path: str):
-        """
-        """
-        path_KC_timelocked2center = os.path.join(reports_path, f'{subject}_KC_timelocked2center.npy')
-        path_KC_timelocked2min = os.path.join(reports_path, f'{subject}_KC_timelocked2min.npy')
-        path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
-        
-        KC_timelocked2center = np.load(path_KC_timelocked2center)
-        KC_timelocked2min = np.load(path_KC_timelocked2min)
-        noKC = np.load(path_noKC)
 
-        return KC_timelocked2center, KC_timelocked2min, noKC
+def read_events(subject:str, reports_path: str):
+    """
+    """
+    path_KC_timelocked2center = os.path.join(reports_path, f'{subject}_KC_timelocked2center.npy')
+    path_KC_timelocked2min = os.path.join(reports_path, f'{subject}_KC_timelocked2min.npy')
+    path_noKC = os.path.join(reports_path, f'{subject}_noKC.npy')
+    
+    KC_timelocked2center = np.load(path_KC_timelocked2center)
+    KC_timelocked2min = np.load(path_KC_timelocked2min)
+    noKC = np.load(path_noKC)
+
+    return KC_timelocked2center, KC_timelocked2min, noKC
+
 
 def save_mean_figures(reports_path, all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs):
     """
@@ -204,6 +209,7 @@ def save_mean_figures(reports_path, all_KCs_timelocked2center, all_KCs_timelocke
     noKC_path = os.path.join(reports_path, f'noKC.png')
     plt.savefig(noKC_path)
 
+
 def plot_3d_figures(all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs):
     """
     """
@@ -244,6 +250,7 @@ def plot_3d_figures(all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs
     ax.set_title('no-KCs')
     plt.show(block=True)
 
+
 def save_characteristics_csv(reports_path, all_KCs_timelocked2center, all_KCs_timelocked2min, all_noKCs, sfreq):
     """
     """
@@ -281,5 +288,3 @@ def save_characteristics_csv(reports_path, all_KCs_timelocked2center, all_KCs_ti
 
     df1.to_csv(os.path.join(reports_path, 'characteristics_timelocked2center.csv'))
     df2.to_csv(os.path.join(reports_path, 'characteristics_timelocked2min.csv'))
-
-

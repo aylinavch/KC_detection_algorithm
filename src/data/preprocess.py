@@ -36,6 +36,7 @@ def structure_data_depending_on_channel_type(raw: mne.io.Raw, channels: list, ee
     new_raw.set_annotations(raw.annotations)
     return new_raw, new_channels
 
+
 def get_only_KC_noKC_labels(raw: mne.io.Raw):
     """
     """
