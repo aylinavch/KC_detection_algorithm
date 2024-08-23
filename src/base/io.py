@@ -94,14 +94,20 @@ def clean_annotations_to_KC_noKC(new_annotations, orig_time):
                         annotations_to_rename.append(j)
                         annotations_to_delete.append(i)
                         break  # Stop searching once an overlap is found          
-    
-    new_KC_ann = new_annotations[annotations_to_rename].rename({'noKC': 'KC'})
-    new_KC_ann_onset = [ann['onset'] for ann in new_KC_ann]
-    new_KC_ann_duration = [ann['duration'] for ann in new_KC_ann]
-    new_KC_ann_description = [ann['description'] for ann in new_KC_ann]
+    try:
+        new_KC_ann = new_annotations[annotations_to_rename].rename({'noKC': 'KC'})
+        new_KC_ann_onset = [ann['onset'] for ann in new_KC_ann]
+        new_KC_ann_duration = [ann['duration'] for ann in new_KC_ann]
+        new_KC_ann_description = [ann['description'] for ann in new_KC_ann]
+    except ValueError:
+        print('\n\n WARNING: No KC annotations were found to rename to noKC as KC.\n\n')
+        new_KC_ann = None
 
     new_annotations.delete(annotations_to_delete+annotations_to_rename)
-    new_annotations.append(new_KC_ann_onset, new_KC_ann_duration, new_KC_ann_description)
+    
+    if new_KC_ann:
+        new_annotations.append(new_KC_ann_onset, new_KC_ann_duration, new_KC_ann_description)
+    
     # Create a new mne.Annotations object with the updated annotations
     new_annotations_cleaned = mne.Annotations(onset=[ann['onset'] for ann in new_annotations],
                                               duration=[ann['duration'] for ann in new_annotations],
