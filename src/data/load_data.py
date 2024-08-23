@@ -1,8 +1,22 @@
+import configuration
 import os
 import re
 import mne.io
 import mne
 import numpy as np
+
+
+def load_configuration_parameters(subject, codename, mode):
+    """
+    """
+    eeg_channel = configuration.EEG_CHANNEL
+    path_file = os.path.join(configuration.DB_ROOT, subject + '.vhdr')
+    scoring_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject + '_scoring.txt')
+    annotations_path = os.path.join(configuration.ANNOTATIONS_ROOT, subject + f"_annotations_{codename}_{mode}.txt")
+    cut_off_freqs = configuration.CUT_OFF_FREQUENCIES
+
+    return eeg_channel, path_file, scoring_path, annotations_path, cut_off_freqs
+
 
 def detect_type_channel(ch_names):
     """
@@ -76,6 +90,7 @@ def load_file(file_path: str):
 
     return raw, channels
 
+
 def delete_duplicated_annotations(raw: mne.io.Raw):
     """
     Delete duplicated annotations in raw object
@@ -100,7 +115,8 @@ def delete_duplicated_annotations(raw: mne.io.Raw):
     raw.set_annotations(new_annotations)
     return raw
 
-def clean_annotations(raw: mne.io.Raw):
+
+def clean_annotations(raw: mne.io.Raw, thresholds: list):
     """
     """
     annots = raw.annotations
@@ -108,7 +124,7 @@ def clean_annotations(raw: mne.io.Raw):
     new_annots_onset = []
     new_annots_duration = []
     for i, ann in enumerate(annots):
-        if ann['duration']<=2.0 and ann['duration']>=0.5:
+        if ann['duration']<=thresholds[1] and ann['duration']>=thresholds[0]:
             new_annots_description.append(ann['description'])
             new_annots_onset.append(ann['onset'])
             new_annots_duration.append(ann['duration'])

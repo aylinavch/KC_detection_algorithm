@@ -4,6 +4,7 @@ from scipy.signal import welch
 from scipy.stats import kurtosis, skew
 from matplotlib import pyplot as plt
 
+
 def get_center_maxi_mini(KC):
     """
     """
@@ -13,6 +14,7 @@ def get_center_maxi_mini(KC):
     mini_pos = np.where(KC == mini)[0][0]
     center = (maxi_pos + mini_pos) // 2
     return center, maxi_pos, mini_pos
+
 
 def get_power(signal, rythm, sfreq):
     """
@@ -35,13 +37,6 @@ def get_power(signal, rythm, sfreq):
     nperseg=int(sfreq*2)
     freq_total, psd_total = welch(signal*1e6, fs=sfreq, nperseg=nperseg, noverlap=nperseg/2, nfft=nperseg*5)
 
-    # plt.figure(figsize=(16, 8))
-    # plt.plot(freq_total, psd_total)
-    # plt.xlabel('Frequency (Hz)')
-    # plt.ylabel('Amplitude (μV²/Hz)')
-    # plt.xlim([0,20])
-    # plt.show(block=True)
-
     f_start, f_end = cut_freqs
     psd = psd_total[np.where((freq_total>=f_start) & (freq_total<=f_end))]
     freq = freq_total[np.where((freq_total>=f_start) & (freq_total<=f_end))]
@@ -51,6 +46,7 @@ def get_power(signal, rythm, sfreq):
     auc_rythm_relative = auc_rythm / auc_total
 
     return auc_rythm, auc_rythm_relative
+
 
 def get_maxi_mini_slope(event, sfreq):
     """
@@ -70,6 +66,7 @@ def get_maxi_mini_slope(event, sfreq):
     slope_negative = ((mini - second_maxi) / (idx_mini - idx_second_maxi))*1e6
 
     return [maxi*1e6, idx_maxi], [mini*1e6, idx_mini], slope_positive, [second_maxi*1e6, idx_second_maxi], slope_negative
+
 
 def build_data_features(kc, sfreq):
     """
@@ -94,12 +91,4 @@ def build_data_features(kc, sfreq):
             num_of_zc_max_min,
             kurt, skewness]
     data = [round(d, 3) for d in data]
-    # plt.figure(figsize=(16, 8))
-    # t = np.arange(len(kc))
-    # plt.plot(t, kc)
-    # plt.plot(t[idx_maxi], kc[idx_maxi], 'ro')
-    # plt.plot(t[idx_mini], kc[idx_mini], 'bo')
-    # plt.plot(t[idx_second_maxi], kc[idx_second_maxi], 'go')
-    # plt.show(block=True)
-
     return data

@@ -2,9 +2,10 @@ import re
 import numpy as np
 import mne.io
 import numpy as np
-from src.utils.sleep_stages_utils import get_scoring_from_path
+from src.base.sleep_stages_utils import get_scoring_from_path
 
-def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1','C4_1']):
+
+def structure_data_depending_on_channel_type(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1','C4_1']):
     """
     """
     eog, _ = raw.get_data(picks=channels['eog'])
@@ -35,7 +36,8 @@ def re_structure(raw: mne.io.Raw, channels: list, eeg_channels_selected=['C3_1',
     new_raw.set_annotations(raw.annotations)
     return new_raw, new_channels
 
-def get_only_KC_labels(raw: mne.io.Raw):
+
+def get_only_KC_noKC_labels(raw: mne.io.Raw):
     """
     """
     regex_KC = r"^KC(?:_\w+)?$"
@@ -53,14 +55,14 @@ def get_only_KC_labels(raw: mne.io.Raw):
     noKC_description = [ann['description'] for ann in all_annotations if re.match(regex_noKC, ann['description'])]
     noKC_annotations = mne.Annotations(noKC_onset, noKC_duration, noKC_description, orig_time=raw.info['meas_date'])
 
-    only_KC_annotations = KC_annotations + noKC_annotations
+    only_KC_noKC_annots = KC_annotations + noKC_annotations
     
-    raw_only_KC = raw.copy().set_annotations(only_KC_annotations)
+    raw_only_KC_noKC = raw.copy().set_annotations(only_KC_noKC_annots)
 
-    return raw_only_KC
+    return raw_only_KC_noKC
 
 
-def set_KC_labels(raw: mne.io.Raw, KC_path: str):
+def set_annotations_labels(raw: mne.io.Raw, KC_path: str):
     """
     ...
 
@@ -103,7 +105,7 @@ def set_KC_labels(raw: mne.io.Raw, KC_path: str):
         return raw.copy()
 
 
-def set_sleep_stages(raw: mne.io.Raw, path_scoring: str, epoch_duration = 30):
+def set_sleep_stages_labels(raw: mne.io.Raw, path_scoring: str, epoch_duration = 30):
     """
     Set sleep stages annotations to raw object
 
@@ -201,6 +203,7 @@ def filter_raw_depending_on_channel_type(raw, channels, cut_off_freqs):
 
     return raw_filtered
 
+
 def add_channel_to_raw(raw, channels, new_channel, name):
     """
     """
@@ -233,3 +236,24 @@ def add_channel_to_raw(raw, channels, new_channel, name):
     new_raw.set_annotations(raw.annotations)
 
     return new_raw
+
+
+def set_candidates_labels(raw: mne.io.Raw, candidates: list):
+    """
+    """
+
+    old_annotations = raw.annotations
+    num_of_candidates = len(candidates)
+    onset = np.zeros(num_of_candidates)        
+    duration = np.zeros(num_of_candidates)    
+    description = np.array(['noKC']*num_of_candidates)
+
+    for i in range(num_of_candidates):
+        onset[i] = candidates[i][0]
+        duration[i] = candidates[i][1]
+    
+    candidates_anot = mne.Annotations(onset, duration, description, orig_time=raw.info['meas_date'])
+    new_annotations =  candidates_anot + old_annotations
+    raw_with_candidates_labels = raw.copy().set_annotations(new_annotations, emit_warning=True)
+    
+    return raw_with_candidates_labels

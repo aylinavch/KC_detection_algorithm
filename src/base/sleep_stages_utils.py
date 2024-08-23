@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_scoring_from_path(path_scoring):
 
     return np.loadtxt(path_scoring, delimiter =' ', usecols =(0) )
