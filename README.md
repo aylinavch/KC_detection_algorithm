@@ -13,7 +13,7 @@ You must need python 3.9 installed in your computer. Also you will need to creat
 Once you have both things, you must run in a terminal inside the directory of this project:
 
 ```
-python3 -m venv .venv
+python3.9 -m venv .venv
 ```
 
 If you have macOS or Linux:
