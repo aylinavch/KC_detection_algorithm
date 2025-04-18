@@ -30,10 +30,12 @@ pip install requirements.txt
 ```
 
 Before running the program, you must create a configuration file called `configuration.py` with this variables:
-- DB_ROOT (root to database files)
-- ANNOTATIONS_ROOT (root to scoring and labeling files)
-- REPORTS_ROOT (root to output)
-- SUBJECTS (list)
+- DB_ROOT: Path where database files are stored
+- ANNOTATIONS_ROOT: Path where scoring and labeling files are stored
+- REPORTS_ROOT: Path where outputs will be saved
+- SUBJECTS: List with name if subjects to process
+- EEG_CHANNEL: String with name of channel to use as reference for eeg)
+- CUT_OFF_FREQUENCIES: Dictionary with frequencies (list of values) per channel (key) where pre-processing will be filter that band-width
 
 > Check `configuration_example.py` for an example of this file
 
