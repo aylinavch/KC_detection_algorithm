@@ -13,14 +13,15 @@ if __name__ == '__main__':
         print(f'-------------------------------------{subject}-------------------------------------')
         file_path = os.path.join(configuration.DB_ROOT, subject+'.vhdr')
         eeg_channel = 'C4_1'
+        
         #Load file
         raw, channels = load_file(file_path)
 
         #Filter each channel depending on type
-        cut_off_freqs = {'eeg': [0.16, 35], 'emg': [10, 90], 'eog': [0.16, 10]}
+        cut_off_freqs = configuration.CUT_OFF_FREQUENCIES
         raw_filtered = filter_raw_depending_on_channel_type(raw, channels, cut_off_freqs)
 
-        #Restructure data
+        #Re-structure data
         raw_restructure, channels_restructure = re_structure(raw_filtered, channels, eeg_channels_selected=[eeg_channel])
         
         #Load and set labels (scoring and KCs)

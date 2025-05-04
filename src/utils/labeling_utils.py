@@ -78,5 +78,5 @@ def run_semi_automatic_labeling(subject: str, codename: str, prev_raw = None):
     
 def run_automatic_labeling(subject: str, codename: str):
     mode = 'auto'
-    print('-------------- Running automatic labeling --------------')
-    print('Not implemented yet :)')
+    #load_configuration_parameters(subject, codename, mode)
+    print('Not developed yet :)')
