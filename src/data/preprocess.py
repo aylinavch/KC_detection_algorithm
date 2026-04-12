@@ -257,3 +257,24 @@ def set_candidates_labels(raw: mne.io.Raw, candidates: list):
     raw_with_candidates_labels = raw.copy().set_annotations(new_annotations, emit_warning=True)
     
     return raw_with_candidates_labels
+
+def set_prediction_labels(raw: mne.io.Raw, candidates: list, probabilities: list):
+    """
+    """
+    old_annotations = raw.annotations
+    num_of_candidates = len(candidates)
+    onset = np.zeros(num_of_candidates)        
+    duration = np.zeros(num_of_candidates)    
+    description = []
+
+    for i, prob in zip(range(num_of_candidates), probabilities):
+        onset[i] = candidates[i][0]
+        duration[i] = candidates[i][1]
+        if prob > 0.75:
+            description[i] = 'KC'
+    
+    candidates_anot = mne.Annotations(onset, duration, description, orig_time=raw.info['meas_date'])
+    new_annotations =  candidates_anot + old_annotations
+    raw_with_candidates_labels = raw.copy().set_annotations(new_annotations, emit_warning=True)
+    
+    return raw_with_candidates_labels

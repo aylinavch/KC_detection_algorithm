@@ -6,3 +6,4 @@ reports
 .venv
 configuration.py
 docs/notebooks/testing_things.ipynb
+*.csv

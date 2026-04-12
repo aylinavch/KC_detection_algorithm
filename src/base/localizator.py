@@ -7,7 +7,9 @@ import numpy as np
 import mne.io
 from src.base.sleep_stages_utils import set_sleep_stages_per_sample
 from src.base.localizator_utils import get_zc_nearest_to
+from src.features.build_features import get_KC_event
 from matplotlib import pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 
 def count_zero_crossings(arr: np.ndarray) -> int:
@@ -62,6 +64,46 @@ def get_candidates(signal:np.ndarray, sfreq: int, path_scoring: str, window_leng
     for p in pos_candidate:
         predicted.append([p[0],p[1]])
         
+    return predicted
+
+
+def get_predicted(signal:np.ndarray, sfreq: int, path_scoring: str, window_length: int =1, stages_allowed:list =[2.0], step:float = 0.1):
+    """
+    """
+    stages_per_sample = set_sleep_stages_per_sample(signal, path_scoring, epoch_duration=30, sfreq=sfreq)    
+    signal = signal[:len(stages_per_sample)]
+    pos_predicted = []
+    pos = 0
+    path = r'C:\Users\ayvazquez\aylin\KC_detection_algorithm\reports\models\NuSVM_bestmodel_2025-06-10.joblib'
+    model = joblib.load(path)
+    while pos < len(signal):
+        if stages_per_sample[pos] in stages_allowed:
+            window = signal[pos:pos+int(window_length*sfreq)]
+            if check_if_meet_main_conditions(window, sfreq):
+                try:
+                    window, idx_start, _, _, _, idx_end, new_pos = detect_points_of_event(window, sfreq, signal, pos, window_length=3) 
+                except AssertionError: # Could not find the points of the event correctly
+                    pos += int(window_length/2*sfreq)
+                    continue
+                onset=(new_pos + idx_start)/sfreq
+                duration=(idx_end-idx_start)/sfreq
+                annot = {'onset': onset, 'duration': duration, 'description':'candidate'}
+                candidate = get_KC_event(annot, signal, sfreq, window=2, timelocked2='center', return_start_of_event=False)[0]*1e6
+                scaler = MinMaxScaler()
+                scaler.fit(candidate.reshape(-1, 1))
+                candidate_scaled = scaler.transform(candidate.reshape(-1, 1))
+                isKC = model.predict(np.ravel(candidate_scaled).reshape(1, -1))
+                if isKC[0] == 'KC':
+                    pos_predicted.append([onset, duration])
+                pos = new_pos + idx_end + 1
+            else:
+                pos += int(step*sfreq)
+        else:
+            pos += int(30*sfreq)
+    
+    predicted = []
+    for p in pos_predicted:
+        predicted.append([p[0],p[1]])
     return predicted
 
 

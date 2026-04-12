@@ -147,3 +147,5 @@ def check_file_if_ready_to_save(raw_after_plot: mne.io.Raw, raw_before_plot: mne
                 return False
         else:
             return False
+    elif mode == 'auto':
+        return True

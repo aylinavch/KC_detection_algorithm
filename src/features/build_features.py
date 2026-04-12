@@ -22,7 +22,7 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center', retu
         mini_to_center = abs(mini-center)
         maxi_to_center = abs(maxi-center)
         new_start = center_in_signal-int(window*sfreq/2)
-        KC = signal[new_start:center_in_signal+int(window*sfreq/2)]
+        KC = signal[new_start:new_start+int(window*sfreq)]
     elif timelocked2 == 'min':
         start = int(annotation['onset']*sfreq)
         end = int(start + annotation['duration']*sfreq)
@@ -32,7 +32,7 @@ def get_KC_event(annotation, signal, sfreq, window=2, timelocked2='center', retu
         mini_to_center = 0
         maxi_to_center = abs(maxi-mini)
         new_start = center_in_signal-int(window*sfreq/2)
-        KC = signal[new_start:center_in_signal-int(window*sfreq/2)]
+        KC = signal[new_start:new_start+int(window*sfreq)]
 
     if return_start_of_event:
         return new_start
